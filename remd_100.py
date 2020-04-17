@@ -70,12 +70,12 @@ class Configuration:
 N = 10
 L = 15
 d = L/N
-steps = 100
-numexchg = 100
+steps = 200
+numexchg = 250
 sigma=1.5*d  #Angstrom
 epsilon=2*d #kJ/mol
 #temp=[100.00,246.00,300.00,362.00,436.00,520.00]
-temp=[300.00,362.00,436.00,520.00,600,670,750,830]
+temp=[300,400,500,600,700,800,900,1000]
 #temp=[300.00, 353.49, 414.11, 482.85, 560.86, 600.00]
 #temp=[300.00, 353.49, 414.11, 682.85, 860.86, 10000.00]
 kb=1.38e-23*6.022e23/(1000)  #kJ/mol*K
@@ -104,17 +104,18 @@ def lj_potential(r):
     energy = 4*epsilon*(((sigma/r)**12)-((sigma/r)**6))
     return energy
 def energy(r,x,y,z,n,compute_all=True):
+    r_new = r
     if compute_all:
-        r[n][0],r[n][1],r[n][2]=x,y,z
-    x_left = list(r[:,0]-L)
-    x_right = list(r[:,0]+L)
-    y_left = list(r[:,1]-L)
-    y_right = list(r[:,1]+L)
-    z_left = list(r[:,2]-L)
-    z_right = list(r[:,2]+L)
-    all_box = np.array([(x_left*3+list(r[:,0])*3+x_right*3)*3, \
-                        ((y_left+list(r[:,1])+y_right)*3)*3, \
-                        z_right*9+list(r[:,2])*9+z_left*9])
+        r_new[n][0],r_new[n][1],r_new[n][2]=x,y,z
+    x_left = list(r_new[:,0]-L)
+    x_right = list(r_new[:,0]+L)
+    y_left = list(r_new[:,1]-L)
+    y_right = list(r_new[:,1]+L)
+    z_left = list(r_new[:,2]-L)
+    z_right = list(r_new[:,2]+L)
+    all_box = np.array([(x_left*3+list(r_new[:,0])*3+x_right*3)*3, \
+                        ((y_left+list(r_new[:,1])+y_right)*3)*3, \
+                        z_right*9+list(r_new[:,2])*9+z_left*9])
     all_box = all_box.transpose((1,0))
     #print(np.shape(all_box))
     i = 13*N
@@ -146,13 +147,13 @@ def energy(r,x,y,z,n,compute_all=True):
     return energy_sum
 def move(r,x,y,z,n,e,diff_e,temp):                         
     if diff_e < 0:
-        e = e_new
+        e += diff_e 
         r[n][0],r[n][1],r[n][2] = inbox(x_new,y_new,z_new)
         
     else:
         rand = random.uniform(0,1)
         if math.exp(-diff_e/(kb*temp)) > rand:
-            e = e_new
+            e += diff_e
             r[n][0],r[n][1],r[n][2] = inbox(x_new,y_new,z_new)
     return r,e
 def delta(temp1,temp2,energy1,energy2):
@@ -173,7 +174,6 @@ def exchange(frame,rg,energy,numexchg):
                 temp_exchange[numexchg+1][i[1]] = temp_exchange[numexchg][i[0]]
                 accepted_exchange[numexchg][i[0]] = 1
                 accepted_exchange[numexchg][i[1]] = 1
-
                 accepted_exchange_ratio[numexchg][i[0]] = accepted_exchange[0:numexchg+1,i[0]].sum()/(numexchg+1)
                 accepted_exchange_ratio[numexchg][i[1]] = accepted_exchange[0:numexchg+1,i[1]].sum()/(numexchg+1)
             else:
@@ -310,11 +310,13 @@ for n in range(numexchg):
             RG[t][i+1+(steps+1)*n] = c.RadGyr() 
             all_energy[t][i+1+(steps+1)*n] = e
             all_frame[t][i+1+(steps+1)*n] = point      
-            average_energy[t][i+1+(steps+1)*n] = all_energy[t][0:i+2+(steps+1)*n].sum()/(i+2+(steps+1)*n)
+           # average_energy[t][i+1+(steps+1)*n] = all_energy[t][0:i+2+(steps+1)*n].sum()/(i+2+(steps+1)*n)
       #  final_frame[t] = all_frame[t][-1]
    # print(n)
     exchange(all_frame,RG,all_energy,n)
-
+for t in range(len(temp)): 
+    for i in range((numexchg)*(steps+1)+1): 
+        average_energy[t][i] = all_energy[t][0:i+1].sum()/(i+1)
 tend=datetime.datetime.now()
 tdiff=tend-tstart
 print(tdiff)
@@ -359,10 +361,10 @@ print(average_energy)
 #print(all_frame)
 #print(RG)
 #print(all_energy)
-RG.to_csv(r'/ufrc/alberto.perezant/liweichang/Tutorial/HW4/remd_3/remd_rg_100.csv',index=False)
-all_energy.to_csv(r'/ufrc/alberto.perezant/liweichang/Tutorial/HW4/remd_3/energy_dataframe_100.csv',index=False)
-average_energy.to_csv(r'/ufrc/alberto.perezant/liweichang/Tutorial/HW4/remd_3/ave_energy_dataframe_100.csv',index=False)
-all_frame.to_csv(r'/ufrc/alberto.perezant/liweichang/Tutorial/HW4/remd_3/frame_dataframe_100.csv',index=False)
-accepted_exchange.to_csv(r'/ufrc/alberto.perezant/liweichang/Tutorial/HW4/remd_3/accepted_exchange_100.csv',index=False)
-accepted_exchange_ratio.to_csv(r'/ufrc/alberto.perezant/liweichang/Tutorial/HW4/remd_3/accepted_exchange_ratio_100.csv',index=False)
-all_temp_exchange.to_csv(r'/ufrc/alberto.perezant/liweichang/Tutorial/HW4/remd_3/temp_ex_dataframe.csv_100',index=False)
+RG.to_csv(r'/ufrc/alberto.perezant/liweichang/Tutorial/HW4/remd_4/remd_rg_100.csv',index=False)
+all_energy.to_csv(r'/ufrc/alberto.perezant/liweichang/Tutorial/HW4/remd_4/energy_dataframe_100.csv',index=False)
+average_energy.to_csv(r'/ufrc/alberto.perezant/liweichang/Tutorial/HW4/remd_4/ave_energy_dataframe_100.csv',index=False)
+all_frame.to_csv(r'/ufrc/alberto.perezant/liweichang/Tutorial/HW4/remd_4/frame_dataframe_100.csv',index=False)
+accepted_exchange.to_csv(r'/ufrc/alberto.perezant/liweichang/Tutorial/HW4/remd_4/accepted_exchange_100.csv',index=False)
+accepted_exchange_ratio.to_csv(r'/ufrc/alberto.perezant/liweichang/Tutorial/HW4/remd_4/accepted_exchange_ratio_100.csv',index=False)
+all_temp_exchange.to_csv(r'/ufrc/alberto.perezant/liweichang/Tutorial/HW4/remd_4/temp_ex_dataframe.csv_100',index=False)
